@@ -6,10 +6,15 @@ export interface BetInfo {
   status: BetStatus;
   cashout_multiplier: number | null;
   payout: number | null;
+  auto_cashout: number | null;
 }
 
-export interface PlayerBet extends BetInfo {
+export interface PlayerBet {
   nickname: string;
+  amount: number;
+  status: BetStatus;
+  cashout_multiplier: number | null;
+  payout: number | null;
   is_me: boolean;
 }
 
@@ -30,8 +35,23 @@ export interface GameState {
   players: PlayerBet[];
 }
 
+export interface BetHistoryRow {
+  round_no: number;
+  crash_point: number;
+  amount: number;
+  status: 'cashed' | 'lost';
+  cashout_multiplier: number | null;
+  payout: number | null;
+  auto_cashout: number | null;
+  created_at: string;
+}
+
 export function isGameState(value: unknown): value is GameState {
   return typeof value === 'object' && value !== null && 'round' in value && 'history' in value && 'players' in value;
+}
+
+export function isBetHistory(value: unknown): value is BetHistoryRow[] {
+  return Array.isArray(value);
 }
 
 export type RedeemResult = { ok: true } | { ok: false; message: string };

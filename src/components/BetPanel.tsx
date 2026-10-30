@@ -1,5 +1,5 @@
-import { CheckCircle2, Coins, Loader2, RotateCcw } from 'lucide-react';
-import { MAX_BET, MIN_BET, REFILL_THRESHOLD } from '@/lib/gameRules';
+import { CheckCircle2, Coins, Loader2, Zap } from 'lucide-react';
+import { MAX_AUTO_CASHOUT, MAX_BET, MIN_AUTO_CASHOUT, MIN_BET } from '@/lib/gameRules';
 import { formatChips, formatMultiplier } from '@/lib/crashMath';
 import type { BetInfo, RoundStatus } from '@/types/game';
 
@@ -10,12 +10,15 @@ interface BetPanelProps {
   lastBet: BetInfo | null;
   liveMultiplier: number;
   amount: number;
+  autoEnabled: boolean;
+  autoMultiplier: number;
   pending: boolean;
   actionError: string | null;
   onAmountChange: (amount: number) => void;
+  onAutoEnabledChange: (enabled: boolean) => void;
+  onAutoMultiplierChange: (multiplier: number) => void;
   onPlaceBet: () => void;
   onCashOut: () => void;
-  onRefill: () => void;
 }
 
 const QUICK_AMOUNTS = [
@@ -26,6 +29,8 @@ const QUICK_AMOUNTS = [
   { label: '최대', apply: (_v: number, max: number) => max },
 ];
 
+const AUTO_PRESETS = [1.5, 2, 5, 10];
+
 export default function BetPanel({
   balance,
   phase,
@@ -33,15 +38,20 @@ export default function BetPanel({
   lastBet,
   liveMultiplier,
   amount,
+  autoEnabled,
+  autoMultiplier,
   pending,
   actionError,
   onAmountChange,
+  onAutoEnabledChange,
+  onAutoMultiplierChange,
   onPlaceBet,
   onCashOut,
-  onRefill,
 }: BetPanelProps) {
   const maxBet = Math.max(MIN_BET, Math.min(balance, MAX_BET));
   const amountValid = amount >= MIN_BET && amount <= MAX_BET && amount <= balance;
+  const autoValid =
+    !autoEnabled || (autoMultiplier >= MIN_AUTO_CASHOUT && autoMultiplier <= MAX_AUTO_CASHOUT);
   const inputLocked = phase !== 'waiting' || bet !== null || pending;
 
   let label: string;
@@ -51,7 +61,7 @@ export default function BetPanel({
 
   if (phase === 'waiting' && !bet) {
     label = `배팅하기 · ${formatChips(amount)} 칩`;
-    enabled = amountValid && !pending;
+    enabled = amountValid && autoValid && !pending;
     onClick = onPlaceBet;
     tone = 'emerald';
   } else if (phase === 'waiting') {
@@ -121,6 +131,69 @@ export default function BetPanel({
         ))}
       </div>
 
+      <div className="mt-5 rounded-xl border border-white/10 bg-black/60 p-4">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+            <Zap className="h-4 w-4 text-amber-300" aria-hidden />
+            자동 캐시아웃
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoEnabled}
+            disabled={inputLocked}
+            onClick={() => onAutoEnabledChange(!autoEnabled)}
+            className={`relative h-6 w-11 rounded-full transition duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
+              autoEnabled ? 'bg-amber-300' : 'bg-zinc-700'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition duration-200 ${
+                autoEnabled ? 'left-[22px]' : 'left-0.5'
+              }`}
+            />
+          </button>
+        </div>
+
+        {autoEnabled && (
+          <>
+            <div className="mt-3 flex items-center rounded-lg border border-white/10 bg-black px-3">
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min={MIN_AUTO_CASHOUT}
+                max={MAX_AUTO_CASHOUT}
+                value={autoMultiplier}
+                disabled={inputLocked}
+                onChange={(e) => onAutoMultiplierChange(Number(e.target.value) || 0)}
+                className="h-10 w-full bg-transparent text-lg font-semibold tabular-nums text-zinc-100 outline-none disabled:opacity-50"
+                aria-label="자동 캐시아웃 배수"
+              />
+              <span className="text-xs text-zinc-500">배</span>
+            </div>
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {AUTO_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  disabled={inputLocked}
+                  onClick={() => onAutoMultiplierChange(preset)}
+                  className="h-8 rounded-lg border border-white/10 bg-zinc-900 text-xs font-medium tabular-nums text-zinc-300 transition duration-150 hover:border-amber-300/40 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {formatMultiplier(preset)}
+                </button>
+              ))}
+            </div>
+            {!autoValid && (
+              <p className="mt-2 text-xs text-rose-300">
+                {formatMultiplier(MIN_AUTO_CASHOUT)} ~ {formatMultiplier(MAX_AUTO_CASHOUT)} 사이로 입력해 주세요.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
       <button
         type="button"
         onClick={onClick}
@@ -141,6 +214,14 @@ export default function BetPanel({
         <p className="mt-3 flex items-center gap-2 text-sm text-emerald-300">
           <CheckCircle2 className="h-4 w-4" aria-hidden />
           이번 라운드에 {formatChips(bet.amount)} 칩 배팅
+          {bet.auto_cashout !== null && ` · ${formatMultiplier(bet.auto_cashout)}에 자동 캐시아웃`}
+        </p>
+      )}
+
+      {bet?.status === 'active' && bet.auto_cashout !== null && phase === 'running' && (
+        <p className="mt-3 flex items-center gap-2 text-sm text-amber-200">
+          <Zap className="h-4 w-4" aria-hidden />
+          {formatMultiplier(bet.auto_cashout)}에 자동으로 캐시아웃됩니다
         </p>
       )}
 
@@ -157,18 +238,6 @@ export default function BetPanel({
             <span className="text-zinc-400">배팅하지 않음</span>
           )}
         </div>
-      )}
-
-      {balance < REFILL_THRESHOLD && (
-        <button
-          type="button"
-          onClick={onRefill}
-          disabled={pending}
-          className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 text-sm font-medium text-amber-300 transition duration-200 hover:bg-amber-300/10 disabled:opacity-50"
-        >
-          <RotateCcw className="h-4 w-4" aria-hidden />
-          1,000 칩으로 충전
-        </button>
       )}
     </div>
   );

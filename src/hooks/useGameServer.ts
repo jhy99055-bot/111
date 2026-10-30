@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getPlayerId } from '@/lib/playerId';
-import { isGameState, type GameState, type RedeemResult } from '@/types/game';
+import {
+  isBetHistory,
+  isGameState,
+  type BetHistoryRow,
+  type GameState,
+  type RedeemResult,
+} from '@/types/game';
 
 const POLL_INTERVAL_MS = 500;
 const CONNECTION_ERROR = '서버와 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
-
-type ActionName = 'place_bet' | 'cash_out' | 'refill_chips';
 
 export function useGameServer() {
   const [playerId] = useState(getPlayerId);
@@ -25,8 +29,7 @@ export function useGameServer() {
   }, []);
 
   const applyState = useCallback((data: unknown, requestedAt: number, respondedAt: number) => {
-    if (!mountedRef.current) return false;
-    if (!isGameState(data)) return false;
+    if (!mountedRef.current || !isGameState(data)) return false;
     const serverTime = new Date(data.server_now).getTime();
     setServerOffsetMs(serverTime - (requestedAt + respondedAt) / 2);
     setState(data);
@@ -51,7 +54,7 @@ export function useGameServer() {
   }, [poll]);
 
   const runAction = useCallback(
-    async (fnName: ActionName, args: Record<string, unknown> = {}) => {
+    async (fnName: 'place_bet' | 'cash_out', args: Record<string, unknown> = {}) => {
       setPending(true);
       setActionError(null);
       const requestedAt = Date.now();
@@ -67,9 +70,12 @@ export function useGameServer() {
     [applyState, playerId],
   );
 
-  const placeBet = useCallback((amount: number) => runAction('place_bet', { p_amount: amount }), [runAction]);
+  const placeBet = useCallback(
+    (amount: number, autoCashout: number | null) =>
+      runAction('place_bet', { p_amount: amount, p_auto_cashout: autoCashout }),
+    [runAction],
+  );
   const cashOut = useCallback(() => runAction('cash_out'), [runAction]);
-  const refill = useCallback(() => runAction('refill_chips'), [runAction]);
 
   const redeem = useCallback(
     async (code: string): Promise<RedeemResult> => {
@@ -83,5 +89,22 @@ export function useGameServer() {
     [applyState, playerId],
   );
 
-  return { state, serverOffsetMs, connectionError, actionError, pending, placeBet, cashOut, refill, redeem };
+  const loadBetHistory = useCallback(async (): Promise<BetHistoryRow[]> => {
+    const { data, error } = await supabase.rpc('game_bet_history', { p_player: playerId });
+    if (error) throw new Error(error.message || CONNECTION_ERROR);
+    if (!isBetHistory(data)) throw new Error(CONNECTION_ERROR);
+    return data;
+  }, [playerId]);
+
+  return {
+    state,
+    serverOffsetMs,
+    connectionError,
+    actionError,
+    pending,
+    placeBet,
+    cashOut,
+    redeem,
+    loadBetHistory,
+  };
 }

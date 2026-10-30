@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Rocket, WifiOff } from 'lucide-react';
+import { History, Rocket, WifiOff } from 'lucide-react';
+import BetHistoryModal from '@/components/BetHistoryModal';
 import BetPanel from '@/components/BetPanel';
 import CrashChart, { type ChartScene, type SellMarker } from '@/components/CrashChart';
 import CrashHistory from '@/components/CrashHistory';
@@ -10,9 +11,12 @@ import { useNow } from '@/hooks/useNow';
 import { floorTo2, formatChips, formatMultiplier, multiplierAt } from '@/lib/crashMath';
 
 export default function CrashGame() {
-  const { state, serverOffsetMs, connectionError, actionError, pending, placeBet, cashOut, refill, redeem } =
+  const { state, serverOffsetMs, connectionError, actionError, pending, placeBet, cashOut, redeem, loadBetHistory } =
     useGameServer();
   const [amount, setAmount] = useState(100);
+  const [autoEnabled, setAutoEnabled] = useState(false);
+  const [autoMultiplier, setAutoMultiplier] = useState(2);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const phase = state?.round.status ?? 'waiting';
   const running = phase === 'running';
@@ -56,9 +60,19 @@ export default function CrashGame() {
             </div>
             <span className="text-sm font-semibold tracking-[0.12em]">로켓 배팅</span>
           </div>
-          <span className="rounded-full border border-white/10 px-4 py-1.5 text-sm tabular-nums text-zinc-300">
-            {formatChips(state.chips)} 칩
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className="flex h-9 items-center gap-2 rounded-full border border-white/10 px-4 text-sm text-zinc-300 transition duration-150 hover:border-emerald-400/40 hover:text-emerald-300"
+            >
+              <History className="h-4 w-4" aria-hidden />
+              배팅 기록
+            </button>
+            <span className="rounded-full border border-white/10 px-4 py-1.5 text-sm tabular-nums text-zinc-300">
+              {formatChips(state.chips)} 칩
+            </span>
+          </div>
         </div>
       </header>
 
@@ -126,17 +140,22 @@ export default function CrashGame() {
             lastBet={state.last_bet}
             liveMultiplier={liveMultiplier}
             amount={amount}
+            autoEnabled={autoEnabled}
+            autoMultiplier={autoMultiplier}
             pending={pending}
             actionError={actionError}
             onAmountChange={setAmount}
-            onPlaceBet={() => placeBet(amount)}
+            onAutoEnabledChange={setAutoEnabled}
+            onAutoMultiplierChange={setAutoMultiplier}
+            onPlaceBet={() => placeBet(amount, autoEnabled ? autoMultiplier : null)}
             onCashOut={cashOut}
-            onRefill={refill}
           />
           <RoundBets players={state.players} phase={phase} />
           <PromoCodeForm onRedeem={redeem} />
         </aside>
       </main>
+
+      <BetHistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} loadHistory={loadBetHistory} />
     </div>
   );
 }
