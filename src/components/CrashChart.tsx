@@ -6,8 +6,13 @@ export type ChartScene =
   | { kind: 'live'; startedAtMs: number }
   | { kind: 'crashed'; crashPoint: number };
 
+export interface SellMarker {
+  multiplier: number;
+}
+
 interface CrashChartProps {
   scene: ChartScene;
+  sell: SellMarker | null;
   children?: ReactNode;
 }
 
@@ -16,13 +21,13 @@ const LIVE_COLOR = { line: '#34d399', fill: 'rgba(52, 211, 153, 0.28)' };
 const CRASH_COLOR = { line: '#fb7185', fill: 'rgba(251, 113, 133, 0.28)' };
 const CURVE_SAMPLES = 160;
 
-export default function CrashChart({ scene, children }: CrashChartProps) {
+export default function CrashChart({ scene, sell, children }: CrashChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sceneRef = useRef<ChartScene>(scene);
+  const dataRef = useRef({ scene, sell });
 
   useEffect(() => {
-    sceneRef.current = scene;
-  }, [scene]);
+    dataRef.current = { scene, sell };
+  }, [scene, sell]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -45,7 +50,8 @@ export default function CrashChart({ scene, children }: CrashChartProps) {
 
     let frame = 0;
     const render = () => {
-      drawChart(ctx, size.width, size.height, sceneRef.current, Date.now());
+      const { scene: currentScene, sell: currentSell } = dataRef.current;
+      drawChart(ctx, size.width, size.height, currentScene, currentSell, Date.now());
       frame = requestAnimationFrame(render);
     };
     frame = requestAnimationFrame(render);
@@ -77,6 +83,7 @@ function drawChart(
   width: number,
   height: number,
   scene: ChartScene,
+  sell: SellMarker | null,
   nowMs: number,
 ) {
   ctx.fillStyle = '#000000';
@@ -182,4 +189,55 @@ function drawChart(
   ctx.arc(head.x, head.y, 5, 0, Math.PI * 2);
   ctx.fillStyle = palette.line;
   ctx.fill();
+
+  if (sell) drawSellMarker(ctx, sell, xToPx, yToPx, baseline, width, PAD.top);
+}
+
+function drawSellMarker(
+  ctx: CanvasRenderingContext2D,
+  sell: SellMarker,
+  xToPx: (seconds: number) => number,
+  yToPx: (multiplier: number) => number,
+  baseline: number,
+  width: number,
+  top: number,
+) {
+  const seconds = secondsAtMultiplier(sell.multiplier);
+  const x = xToPx(seconds);
+  const y = yToPx(sell.multiplier);
+
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(253, 224, 71, 0.6)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, baseline);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(x, y, 7, 0, Math.PI * 2);
+  ctx.fillStyle = '#fde047';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#000000';
+  ctx.stroke();
+
+  const label = `SELL ${sell.multiplier.toFixed(2)}x`;
+  ctx.font = 'bold 13px ui-sans-serif, system-ui, sans-serif';
+  const textWidth = ctx.measureText(label).width;
+  const boxW = textWidth + 20;
+  const boxH = 26;
+  const boxX = Math.min(Math.max(x - boxW / 2, PAD.left), width - PAD.right - boxW);
+  const boxY = Math.max(y - boxH - 14, top);
+
+  ctx.beginPath();
+  ctx.roundRect(boxX, boxY, boxW, boxH, 13);
+  ctx.fillStyle = '#fde047';
+  ctx.fill();
+  ctx.fillStyle = '#000000';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2);
 }

@@ -9,6 +9,10 @@ export function secondsAtMultiplier(multiplier: number): number {
   return Math.log(multiplier) / GROWTH_RATE;
 }
 
+export function floorTo2(value: number): number {
+  return Math.floor(value * 100) / 100;
+}
+
 export function formatMultiplier(value: number): string {
   return `${value.toFixed(2)}x`;
 }

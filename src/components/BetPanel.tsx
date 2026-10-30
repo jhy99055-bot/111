@@ -1,14 +1,17 @@
-import { CheckCircle2, Coins, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Coins, Loader2, RotateCcw } from 'lucide-react';
+import { MAX_BET, MIN_BET, REFILL_THRESHOLD } from '@/lib/gameRules';
 import { formatChips, formatMultiplier } from '@/lib/crashMath';
-import { MAX_BET, MIN_BET, REFILL_THRESHOLD, payoutOf, type Bet, type LastResult, type Phase } from '@/lib/crashEngine';
+import type { BetInfo, RoundStatus } from '@/types/game';
 
 interface BetPanelProps {
   balance: number;
-  phase: Phase;
-  bet: Bet | null;
-  lastResult: LastResult | null;
+  phase: RoundStatus;
+  bet: BetInfo | null;
+  lastBet: BetInfo | null;
   liveMultiplier: number;
   amount: number;
+  pending: boolean;
+  actionError: string | null;
   onAmountChange: (amount: number) => void;
   onPlaceBet: () => void;
   onCashOut: () => void;
@@ -27,9 +30,11 @@ export default function BetPanel({
   balance,
   phase,
   bet,
-  lastResult,
+  lastBet,
   liveMultiplier,
   amount,
+  pending,
+  actionError,
   onAmountChange,
   onPlaceBet,
   onCashOut,
@@ -37,35 +42,35 @@ export default function BetPanel({
 }: BetPanelProps) {
   const maxBet = Math.max(MIN_BET, Math.min(balance, MAX_BET));
   const amountValid = amount >= MIN_BET && amount <= MAX_BET && amount <= balance;
-  const cashedOut = bet !== null && bet.cashoutMultiplier !== null;
+  const inputLocked = phase !== 'waiting' || bet !== null || pending;
 
   let label: string;
-  let enabled: boolean;
+  let enabled = false;
   let onClick: () => void = () => {};
   let tone: 'emerald' | 'amber' | 'muted';
 
-  if (phase === 'betting' && !bet) {
+  if (phase === 'waiting' && !bet) {
     label = `배팅하기 · ${formatChips(amount)} 칩`;
-    enabled = amountValid;
+    enabled = amountValid && !pending;
     onClick = onPlaceBet;
     tone = 'emerald';
-  } else if (phase === 'betting') {
+  } else if (phase === 'waiting') {
     label = '배팅 완료';
-    enabled = false;
     tone = 'muted';
-  } else if (phase === 'running' && bet && !cashedOut) {
+  } else if (phase === 'running' && bet?.status === 'active') {
     const profit = Math.floor(bet.amount * liveMultiplier) - bet.amount;
     label = `캐시아웃 ${formatMultiplier(liveMultiplier)} · +${formatChips(profit)} 칩`;
-    enabled = true;
+    enabled = !pending;
     onClick = onCashOut;
     tone = 'amber';
-  } else if (phase === 'running' && cashedOut) {
-    label = `${formatMultiplier(bet?.cashoutMultiplier ?? 1)}에 캐시아웃 완료`;
-    enabled = false;
+  } else if (phase === 'running' && bet?.status === 'cashed') {
+    label = `${formatMultiplier(bet.cashout_multiplier ?? 1)}에 캐시아웃 완료`;
+    tone = 'muted';
+  } else if (phase === 'running') {
+    label = '게임 진행 중';
     tone = 'muted';
   } else {
-    label = '게임 진행 중';
-    enabled = false;
+    label = '다음 라운드 준비 중';
     tone = 'muted';
   }
 
@@ -76,8 +81,6 @@ export default function BetPanel({
         muted: '',
       }[tone]
     : 'bg-zinc-800 text-zinc-500';
-
-  const inputLocked = phase !== 'betting' || bet !== null;
 
   return (
     <div className="rounded-2xl border border-white/10 bg-zinc-950 p-5">
@@ -122,30 +125,36 @@ export default function BetPanel({
         type="button"
         onClick={onClick}
         disabled={!enabled}
-        className={`mt-5 flex h-14 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold transition duration-200 disabled:cursor-not-allowed ${toneClass}`}
+        className={`mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition duration-200 disabled:cursor-not-allowed ${toneClass}`}
       >
+        {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
         {label}
       </button>
 
-      {bet && phase === 'betting' && (
+      {actionError && (
+        <p role="alert" className="mt-3 text-sm text-rose-300">
+          {actionError}
+        </p>
+      )}
+
+      {bet && phase === 'waiting' && (
         <p className="mt-3 flex items-center gap-2 text-sm text-emerald-300">
           <CheckCircle2 className="h-4 w-4" aria-hidden />
           이번 라운드에 {formatChips(bet.amount)} 칩 배팅
         </p>
       )}
 
-      {lastResult && phase !== 'running' && (
+      {lastBet && phase !== 'running' && (
         <div className="mt-4 rounded-xl border border-white/10 bg-black/60 px-4 py-3 text-sm">
           <span className="text-zinc-500">지난 라운드: </span>
-          {lastResult.bet === null ? (
-            <span className="text-zinc-400">배팅하지 않음</span>
-          ) : lastResult.bet.cashoutMultiplier !== null ? (
+          {lastBet.status === 'cashed' && lastBet.cashout_multiplier !== null && lastBet.payout !== null ? (
             <span className="font-medium text-emerald-300">
-              {formatMultiplier(lastResult.bet.cashoutMultiplier)}에 캐시아웃, +
-              {formatChips(payoutOf(lastResult.bet) - lastResult.bet.amount)} 칩
+              {formatMultiplier(lastBet.cashout_multiplier)}에 캐시아웃, +{formatChips(lastBet.payout - lastBet.amount)} 칩
             </span>
+          ) : lastBet.status === 'lost' ? (
+            <span className="font-medium text-rose-300">{formatChips(lastBet.amount)} 칩 손실</span>
           ) : (
-            <span className="font-medium text-rose-300">{formatChips(lastResult.bet.amount)} 칩 손실</span>
+            <span className="text-zinc-400">배팅하지 않음</span>
           )}
         </div>
       )}
@@ -154,7 +163,8 @@ export default function BetPanel({
         <button
           type="button"
           onClick={onRefill}
-          className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 text-sm font-medium text-amber-300 transition duration-200 hover:bg-amber-300/10"
+          disabled={pending}
+          className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 text-sm font-medium text-amber-300 transition duration-200 hover:bg-amber-300/10 disabled:opacity-50"
         >
           <RotateCcw className="h-4 w-4" aria-hidden />
           1,000 칩으로 충전

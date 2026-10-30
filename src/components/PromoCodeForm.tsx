@@ -1,21 +1,24 @@
 import { useState, type FormEvent } from 'react';
-import { Gift } from 'lucide-react';
-import type { PromoResult } from '@/lib/promoCodes';
-import { formatChips } from '@/lib/crashMath';
+import { Gift, Loader2 } from 'lucide-react';
+import type { RedeemResult } from '@/types/game';
 
 interface PromoCodeFormProps {
-  onRedeem: (code: string) => PromoResult;
+  onRedeem: (code: string) => Promise<RedeemResult>;
 }
 
 export default function PromoCodeForm({ onRedeem }: PromoCodeFormProps) {
   const [code, setCode] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = onRedeem(code);
+    if (submitting || !code.trim()) return;
+    setSubmitting(true);
+    const result = await onRedeem(code.trim());
+    setSubmitting(false);
     if (result.ok) {
-      setFeedback({ ok: true, text: `${formatChips(result.amount)} 칩이 충전되었습니다.` });
+      setFeedback({ ok: true, text: '프로모션 코드가 적용되었습니다.' });
       setCode('');
     } else {
       setFeedback({ ok: false, text: result.message });
@@ -42,17 +45,15 @@ export default function PromoCodeForm({ onRedeem }: PromoCodeFormProps) {
         />
         <button
           type="submit"
-          disabled={!code.trim()}
-          className="h-11 shrink-0 rounded-xl bg-zinc-100 px-5 text-sm font-semibold text-zinc-950 transition duration-200 hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+          disabled={!code.trim() || submitting}
+          className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-zinc-100 px-5 text-sm font-semibold text-zinc-950 transition duration-200 hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
         >
+          {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
           적용
         </button>
       </form>
       {feedback && (
-        <p
-          role="status"
-          className={`mt-3 text-sm ${feedback.ok ? 'text-emerald-300' : 'text-rose-300'}`}
-        >
+        <p role="status" className={`mt-3 text-sm ${feedback.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
           {feedback.text}
         </p>
       )}
