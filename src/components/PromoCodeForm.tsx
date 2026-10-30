@@ -26,9 +26,9 @@ export default function PromoCodeForm({ onRedeem }: PromoCodeFormProps) {
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950 p-5">
-      <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
-        <Gift className="h-4 w-4 text-emerald-400" aria-hidden />
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+        <Gift className="h-4 w-4 text-teal-600" aria-hidden />
         프로모션 코드
       </div>
       <form onSubmit={handleSubmit} className="mt-3 flex gap-2">
@@ -41,19 +41,19 @@ export default function PromoCodeForm({ onRedeem }: PromoCodeFormProps) {
           }}
           placeholder="코드를 입력하세요"
           aria-label="프로모션 코드"
-          className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-black px-4 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition focus:border-emerald-400/50"
+          className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100"
         />
         <button
           type="submit"
           disabled={!code.trim() || submitting}
-          className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-zinc-100 px-5 text-sm font-semibold text-zinc-950 transition duration-200 hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+          className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white transition duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
           적용
         </button>
       </form>
       {feedback && (
-        <p role="status" className={`mt-3 text-sm ${feedback.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
+        <p role="status" className={`mt-3 text-sm ${feedback.ok ? 'text-teal-700' : 'text-rose-600'}`}>
           {feedback.text}
         </p>
       )}

@@ -17,8 +17,11 @@ interface CrashChartProps {
 }
 
 const PAD = { top: 24, right: 24, bottom: 36, left: 56 };
-const LIVE_COLOR = { line: '#34d399', fill: 'rgba(52, 211, 153, 0.28)' };
-const CRASH_COLOR = { line: '#fb7185', fill: 'rgba(251, 113, 133, 0.28)' };
+const LIVE_COLOR = { line: '#0d9488', fill: 'rgba(13, 148, 136, 0.14)' };
+const CRASH_COLOR = { line: '#e11d48', fill: 'rgba(225, 29, 72, 0.12)' };
+const GRID = 'rgba(15, 23, 42, 0.06)';
+const AXIS_TEXT = 'rgba(71, 85, 105, 0.9)';
+const BASELINE = 'rgba(15, 23, 42, 0.16)';
 const CURVE_SAMPLES = 160;
 
 export default function CrashChart({ scene, sell, children }: CrashChartProps) {
@@ -63,7 +66,7 @@ export default function CrashChart({ scene, sell, children }: CrashChartProps) {
   }, []);
 
   return (
-    <div className="relative h-[340px] w-full overflow-hidden rounded-2xl border border-white/10 bg-black sm:h-[440px]">
+    <div className="relative h-[340px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:h-[440px]">
       <canvas ref={canvasRef} className="h-full w-full" aria-label="배율 그래프" />
       {children}
     </div>
@@ -86,7 +89,7 @@ function drawChart(
   sell: SellMarker | null,
   nowMs: number,
 ) {
-  ctx.fillStyle = '#000000';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, height);
   if (width === 0 || height === 0) return;
 
@@ -120,12 +123,12 @@ function drawChart(
   ctx.textBaseline = 'middle';
   for (let m = 1 + yStep; m <= yMax; m += yStep) {
     const y = yToPx(m);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+    ctx.strokeStyle = GRID;
     ctx.beginPath();
     ctx.moveTo(PAD.left, y);
     ctx.lineTo(width - PAD.right, y);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.fillStyle = AXIS_TEXT;
     ctx.fillText(`${m.toFixed(m % 1 === 0 ? 0 : 1)}x`, PAD.left - 10, y);
   }
 
@@ -134,16 +137,16 @@ function drawChart(
   ctx.textBaseline = 'top';
   for (let s = xStep; s <= xMax; s += xStep) {
     const x = xToPx(s);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+    ctx.strokeStyle = GRID;
     ctx.beginPath();
     ctx.moveTo(x, PAD.top);
     ctx.lineTo(x, baseline);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.fillStyle = AXIS_TEXT;
     ctx.fillText(`${s}초`, x, baseline + 10);
   }
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+  ctx.strokeStyle = BASELINE;
   ctx.beginPath();
   ctx.moveTo(PAD.left, baseline);
   ctx.lineTo(width - PAD.right, baseline);
@@ -163,7 +166,7 @@ function drawChart(
   ctx.closePath();
   const gradient = ctx.createLinearGradient(0, PAD.top, 0, baseline);
   gradient.addColorStop(0, palette.fill);
-  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
   ctx.fillStyle = gradient;
   ctx.fill();
 
@@ -172,17 +175,14 @@ function drawChart(
   ctx.strokeStyle = palette.line;
   ctx.lineWidth = 3;
   ctx.lineJoin = 'round';
-  ctx.shadowColor = palette.line;
-  ctx.shadowBlur = 18;
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   const head = samples[samples.length - 1];
-  const pulse = scene.kind === 'live' ? 1 + 0.25 * Math.sin(nowMs / 120) : 1;
+  const pulse = scene.kind === 'live' ? 1 + 0.2 * Math.sin(nowMs / 160) : 1;
   ctx.beginPath();
   ctx.arc(head.x, head.y, 9 * pulse, 0, Math.PI * 2);
   ctx.fillStyle = palette.line;
-  ctx.globalAlpha = 0.25;
+  ctx.globalAlpha = 0.2;
   ctx.fill();
   ctx.globalAlpha = 1;
   ctx.beginPath();
@@ -208,7 +208,7 @@ function drawSellMarker(
 
   ctx.save();
   ctx.setLineDash([4, 4]);
-  ctx.strokeStyle = 'rgba(253, 224, 71, 0.6)';
+  ctx.strokeStyle = 'rgba(217, 119, 6, 0.6)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(x, y);
@@ -218,10 +218,10 @@ function drawSellMarker(
 
   ctx.beginPath();
   ctx.arc(x, y, 7, 0, Math.PI * 2);
-  ctx.fillStyle = '#fde047';
+  ctx.fillStyle = '#f59e0b';
   ctx.fill();
   ctx.lineWidth = 2;
-  ctx.strokeStyle = '#000000';
+  ctx.strokeStyle = '#ffffff';
   ctx.stroke();
 
   const label = `SELL ${sell.multiplier.toFixed(2)}x`;
@@ -234,9 +234,12 @@ function drawSellMarker(
 
   ctx.beginPath();
   ctx.roundRect(boxX, boxY, boxW, boxH, 13);
-  ctx.fillStyle = '#fde047';
+  ctx.fillStyle = '#fef3c7';
   ctx.fill();
-  ctx.fillStyle = '#000000';
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#f59e0b';
+  ctx.stroke();
+  ctx.fillStyle = '#92400e';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2);

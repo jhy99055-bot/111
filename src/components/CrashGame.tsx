@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { History, Rocket, WifiOff } from 'lucide-react';
+import { History, WifiOff } from 'lucide-react';
 import BetHistoryModal from '@/components/BetHistoryModal';
 import BetPanel from '@/components/BetPanel';
 import CrashChart, { type ChartScene, type SellMarker } from '@/components/CrashChart';
 import CrashHistory from '@/components/CrashHistory';
 import PromoCodeForm from '@/components/PromoCodeForm';
 import RoundBets from '@/components/RoundBets';
+import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
 import { useGameServer } from '@/hooks/useGameServer';
 import { useGameSounds } from '@/hooks/useGameSounds';
 import { useNow } from '@/hooks/useNow';
@@ -45,10 +47,24 @@ export default function CrashGame() {
     return { kind: 'idle' };
   }, [running, startedAtLocal, lastCrashPoint]);
 
+  const historyButton = (
+    <button
+      type="button"
+      onClick={() => setHistoryOpen(true)}
+      className="flex h-9 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition duration-150 hover:border-teal-300 hover:text-teal-700"
+    >
+      <History className="h-4 w-4" aria-hidden />
+      배팅 기록
+    </button>
+  );
+
   if (!state) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black px-4 text-center text-sm text-zinc-400">
-        {connectionError ?? '게임 서버에 연결하는 중입니다...'}
+      <div className="flex min-h-screen flex-col bg-slate-50">
+        <SiteHeader />
+        <div className="flex flex-1 items-center justify-center px-4 text-center text-sm text-slate-500">
+          {connectionError ?? '게임 서버에 연결하는 중입니다...'}
+        </div>
       </div>
     );
   }
@@ -57,83 +73,70 @@ export default function CrashGame() {
   const restLeft = formatRestTime(secondsLeft);
 
   return (
-    <div className="min-h-screen bg-black text-zinc-100">
-      <header className="border-b border-white/10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 ring-1 ring-emerald-400/30">
-              <Rocket className="h-4 w-4 text-emerald-400" aria-hidden />
-            </div>
-            <span className="text-sm font-semibold tracking-[0.12em]">로켓 배팅</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setHistoryOpen(true)}
-              className="flex h-9 items-center gap-2 rounded-full border border-white/10 px-4 text-sm text-zinc-300 transition duration-150 hover:border-emerald-400/40 hover:text-emerald-300"
-            >
-              <History className="h-4 w-4" aria-hidden />
-              배팅 기록
-            </button>
-            <span className="rounded-full border border-white/10 px-4 py-1.5 text-sm tabular-nums text-zinc-300">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+      <SiteHeader
+        actions={
+          <>
+            {historyButton}
+            <span className="rounded-full bg-slate-100 px-4 py-1.5 text-sm font-medium tabular-nums text-slate-700">
               {formatChips(state.chips)} 칩
             </span>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {connectionError && (
-        <div role="status" className="flex items-center justify-center gap-2 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">
+        <div role="status" className="flex items-center justify-center gap-2 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           <WifiOff className="h-4 w-4" aria-hidden />
           {connectionError}
         </div>
       )}
 
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_340px]">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_340px]">
         <section className="flex min-w-0 flex-col gap-4">
           <CrashHistory history={state.history} />
           <CrashChart scene={scene} sell={sell}>
             {roundNo !== null && (
-              <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/80 px-3 py-1.5 text-xs font-semibold tabular-nums text-zinc-300 sm:left-6 sm:top-6">
+              <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold tabular-nums text-slate-600 sm:left-6 sm:top-6">
                 라운드 {roundNo} / {ROUNDS_PER_CYCLE}
               </div>
             )}
             {sell && (
-              <div className="pointer-events-none absolute right-4 top-4 flex items-center gap-2 rounded-full border border-amber-300/40 bg-black/80 px-3 py-1.5 text-xs font-semibold tabular-nums text-amber-200 sm:right-6 sm:top-6">
+              <div className="pointer-events-none absolute right-4 top-4 flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold tabular-nums text-amber-800 ring-1 ring-amber-200 sm:right-6 sm:top-6">
                 <span>내 캐시아웃 {formatMultiplier(sell.multiplier)}</span>
-                <span className="text-amber-300/70">+{formatChips(sellProfit)} 칩</span>
+                <span className="text-amber-700">+{formatChips(sellProfit)} 칩</span>
               </div>
             )}
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
               {phase === 'running' && (
                 <>
-                  <span className="mb-2 rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold tracking-[0.2em] text-emerald-300">
+                  <span className="mb-2 rounded-full bg-teal-50 px-3 py-1 text-[11px] font-semibold tracking-wide text-teal-700">
                     진행 중
                   </span>
-                  <span className="text-6xl font-semibold tabular-nums text-emerald-300 drop-shadow-[0_0_24px_rgba(52,211,153,0.45)] sm:text-7xl">
+                  <span className="text-6xl font-semibold tabular-nums text-teal-700 sm:text-7xl">
                     {formatMultiplier(liveMultiplier)}
                   </span>
                 </>
               )}
               {phase === 'crashed' && (
                 <>
-                  <span className="text-xs font-semibold tracking-[0.25em] text-rose-400">크래시!</span>
-                  <span className="mt-2 text-6xl font-semibold tabular-nums text-rose-400 sm:text-7xl">
+                  <span className="text-sm font-semibold tracking-wide text-rose-600">크래시</span>
+                  <span className="mt-2 text-6xl font-semibold tabular-nums text-rose-600 sm:text-7xl">
                     {formatMultiplier(lastCrashPoint ?? 1)}
                   </span>
-                  <span className="mt-3 text-sm text-zinc-400">잠시 후 새 라운드가 시작됩니다</span>
+                  <span className="mt-3 text-sm text-slate-500">잠시 후 새 라운드가 시작됩니다</span>
                 </>
               )}
               {phase === 'waiting' && (
                 <>
-                  <span className="text-xs font-semibold tracking-[0.25em] text-zinc-400">
+                  <span className="text-sm font-semibold tracking-wide text-slate-500">
                     {myBet ? '배팅 완료' : '배팅을 해주세요'}
                   </span>
-                  <span className="mt-2 text-6xl font-semibold tabular-nums text-zinc-100 sm:text-7xl">
+                  <span className="mt-2 text-6xl font-semibold tabular-nums text-slate-900 sm:text-7xl">
                     {secondsLeft}초
                   </span>
                   {lastCrashPoint !== undefined && (
-                    <span className="mt-3 text-sm tabular-nums text-zinc-400">
+                    <span className="mt-3 text-sm tabular-nums text-slate-500">
                       이전 크래시 {formatMultiplier(lastCrashPoint)}
                     </span>
                   )}
@@ -141,9 +144,11 @@ export default function CrashGame() {
               )}
               {phase === 'resting' && (
                 <>
-                  <span className="text-xs font-semibold tracking-[0.25em] text-sky-300">쉬는 시간</span>
-                  <span className="mt-2 text-6xl font-semibold tabular-nums text-sky-200 sm:text-7xl">{restLeft}</span>
-                  <span className="mt-3 text-sm text-zinc-400">모든 플레이어가 함께 쉬고 있습니다. 끝나면 1라운드부터 다시 시작합니다</span>
+                  <span className="text-sm font-semibold tracking-wide text-sky-700">쉬는 시간</span>
+                  <span className="mt-2 text-6xl font-semibold tabular-nums text-sky-800 sm:text-7xl">{restLeft}</span>
+                  <span className="mt-3 max-w-xs text-sm text-slate-500">
+                    모든 플레이어가 함께 쉬고 있습니다. 끝나면 1라운드부터 다시 시작합니다
+                  </span>
                 </>
               )}
             </div>
@@ -172,6 +177,8 @@ export default function CrashGame() {
           <PromoCodeForm onRedeem={redeem} />
         </aside>
       </main>
+
+      <SiteFooter />
 
       <BetHistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} loadHistory={loadBetHistory} />
     </div>
