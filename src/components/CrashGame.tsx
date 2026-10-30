@@ -7,8 +7,11 @@ import CrashHistory from '@/components/CrashHistory';
 import PromoCodeForm from '@/components/PromoCodeForm';
 import RoundBets from '@/components/RoundBets';
 import { useGameServer } from '@/hooks/useGameServer';
+import { useGameSounds } from '@/hooks/useGameSounds';
 import { useNow } from '@/hooks/useNow';
 import { floorTo2, formatChips, formatMultiplier, multiplierAt } from '@/lib/crashMath';
+
+const ROUNDS_PER_CYCLE = 1000;
 
 export default function CrashGame() {
   const { state, serverOffsetMs, connectionError, actionError, pending, placeBet, cashOut, redeem, loadBetHistory } =
@@ -17,6 +20,7 @@ export default function CrashGame() {
   const [autoEnabled, setAutoEnabled] = useState(false);
   const [autoMultiplier, setAutoMultiplier] = useState(2);
   const [historyOpen, setHistoryOpen] = useState(false);
+  useGameSounds(state);
 
   const phase = state?.round.status ?? 'waiting';
   const running = phase === 'running';
@@ -33,6 +37,7 @@ export default function CrashGame() {
     myBet?.status === 'cashed' && myBet.cashout_multiplier !== null
       ? { multiplier: myBet.cashout_multiplier }
       : null;
+  const roundNo = state?.round.round_no ?? null;
 
   const scene = useMemo<ChartScene>(() => {
     if (running && startedAtLocal !== null) return { kind: 'live', startedAtMs: startedAtLocal };
@@ -49,6 +54,7 @@ export default function CrashGame() {
   }
 
   const sellProfit = sell && myBet ? (myBet.payout ?? 0) - myBet.amount : 0;
+  const restLeft = formatRestTime(secondsLeft);
 
   return (
     <div className="min-h-screen bg-black text-zinc-100">
@@ -87,6 +93,11 @@ export default function CrashGame() {
         <section className="flex min-w-0 flex-col gap-4">
           <CrashHistory history={state.history} />
           <CrashChart scene={scene} sell={sell}>
+            {roundNo !== null && (
+              <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/80 px-3 py-1.5 text-xs font-semibold tabular-nums text-zinc-300 sm:left-6 sm:top-6">
+                라운드 {roundNo} / {ROUNDS_PER_CYCLE}
+              </div>
+            )}
             {sell && (
               <div className="pointer-events-none absolute right-4 top-4 flex items-center gap-2 rounded-full border border-amber-300/40 bg-black/80 px-3 py-1.5 text-xs font-semibold tabular-nums text-amber-200 sm:right-6 sm:top-6">
                 <span>내 캐시아웃 {formatMultiplier(sell.multiplier)}</span>
@@ -128,6 +139,13 @@ export default function CrashGame() {
                   )}
                 </>
               )}
+              {phase === 'resting' && (
+                <>
+                  <span className="text-xs font-semibold tracking-[0.25em] text-sky-300">쉬는 시간</span>
+                  <span className="mt-2 text-6xl font-semibold tabular-nums text-sky-200 sm:text-7xl">{restLeft}</span>
+                  <span className="mt-3 text-sm text-zinc-400">모든 플레이어가 함께 쉬고 있습니다. 끝나면 1라운드부터 다시 시작합니다</span>
+                </>
+              )}
             </div>
           </CrashChart>
         </section>
@@ -158,4 +176,10 @@ export default function CrashGame() {
       <BetHistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} loadHistory={loadBetHistory} />
     </div>
   );
+}
+
+function formatRestTime(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }

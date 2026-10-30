@@ -1,4 +1,4 @@
-export type RoundStatus = 'waiting' | 'running' | 'crashed';
+export type RoundStatus = 'waiting' | 'running' | 'crashed' | 'resting';
 export type BetStatus = 'active' | 'cashed' | 'lost';
 
 export interface BetInfo {
@@ -23,6 +23,7 @@ export interface GameState {
   chips: number;
   round: {
     id: string;
+    round_no: number | null;
     status: RoundStatus;
     ends_at: string;
     started_at: string | null;

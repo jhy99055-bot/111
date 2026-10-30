@@ -21,12 +21,12 @@ interface BetPanelProps {
   onCashOut: () => void;
 }
 
-const QUICK_AMOUNTS = [
-  { label: '+10', apply: (v: number) => v + 10 },
-  { label: '+100', apply: (v: number) => v + 100 },
-  { label: '+1K', apply: (v: number) => v + 1000 },
+const QUICK_AMOUNTS: { label: string; apply: (value: number) => number }[] = [
+  { label: '+1,000', apply: (v: number) => v + 1000 },
+  { label: '+5,000', apply: (v: number) => v + 5000 },
+  { label: '+10,000', apply: (v: number) => v + 10000 },
   { label: '1/2', apply: (v: number) => v / 2 },
-  { label: '최대', apply: (_v: number, max: number) => max },
+  { label: '1/4', apply: (v: number) => v / 4 },
 ];
 
 const AUTO_PRESETS = [1.5, 2, 5, 10];
@@ -79,6 +79,9 @@ export default function BetPanel({
   } else if (phase === 'running') {
     label = '게임 진행 중';
     tone = 'muted';
+  } else if (phase === 'resting') {
+    label = '쉬는 시간';
+    tone = 'muted';
   } else {
     label = '다음 라운드 준비 중';
     tone = 'muted';
@@ -123,7 +126,7 @@ export default function BetPanel({
             key={chip.label}
             type="button"
             disabled={inputLocked}
-            onClick={() => onAmountChange(Math.min(maxBet, Math.max(MIN_BET, Math.round(chip.apply(amount, maxBet)))))}
+            onClick={() => onAmountChange(Math.min(maxBet, Math.max(MIN_BET, Math.round(chip.apply(amount)))))}
             className="h-9 rounded-lg border border-white/10 bg-zinc-900 text-xs font-medium text-zinc-300 transition duration-150 hover:border-emerald-400/40 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {chip.label}
