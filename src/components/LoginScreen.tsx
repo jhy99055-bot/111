@@ -1,11 +1,13 @@
-import { Coins, Crown, MessagesSquare, ShieldCheck } from 'lucide-react';
+import { Coins, Crown, FlaskConical, MessagesSquare, ShieldCheck } from 'lucide-react';
+import { GUEST_LOGIN_ENABLED } from '@/lib/authConfig';
 
 interface LoginScreenProps {
   onSignIn: () => void;
+  onGuestSignIn: () => void;
   errorMessage: string | null;
 }
 
-export default function LoginScreen({ onSignIn, errorMessage }: LoginScreenProps) {
+export default function LoginScreen({ onSignIn, onGuestSignIn, errorMessage }: LoginScreenProps) {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <main className="flex flex-1 items-center justify-center px-4 py-12">
@@ -28,6 +30,17 @@ export default function LoginScreen({ onSignIn, errorMessage }: LoginScreenProps
             <MessagesSquare className="h-4 w-4" aria-hidden />
             디스코드로 시작하기
           </button>
+
+          {GUEST_LOGIN_ENABLED && (
+            <button
+              type="button"
+              onClick={onGuestSignIn}
+              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-4 text-sm font-medium text-slate-600 transition duration-200 hover:border-teal-400 hover:text-teal-700"
+            >
+              <FlaskConical className="h-4 w-4" aria-hidden />
+              게스트로 체험하기 (테스트용)
+            </button>
+          )}
 
           {errorMessage && (
             <p role="alert" className="mt-4 text-sm text-rose-600">

@@ -3,7 +3,7 @@ import LoginScreen from '@/components/LoginScreen';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function App() {
-  const { status, member, errorMessage, signInWithDiscord, signOut } = useAuth();
+  const { status, member, errorMessage, signInWithDiscord, signInAsGuest, signOut } = useAuth();
 
   if (status === 'loading') {
     return (
@@ -17,5 +17,7 @@ export default function App() {
     return <CrashGame member={member} onSignOut={signOut} />;
   }
 
-  return <LoginScreen onSignIn={signInWithDiscord} errorMessage={errorMessage} />;
+  return (
+    <LoginScreen onSignIn={signInWithDiscord} onGuestSignIn={signInAsGuest} errorMessage={errorMessage} />
+  );
 }

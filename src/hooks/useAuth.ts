@@ -7,6 +7,7 @@ export type AuthStatus = 'loading' | 'signed-out' | 'ready' | 'error';
 
 const LOAD_ERROR = '회원 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
 const LOGIN_ERROR = '디스코드 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+const GUEST_ERROR = '게스트 로그인을 하지 못했습니다. 잠시 후 다시 시도해 주세요.';
 
 export function useAuth() {
   const [status, setStatus] = useState<AuthStatus>('loading');
@@ -61,10 +62,16 @@ export function useAuth() {
     if (error) setErrorMessage(LOGIN_ERROR);
   }, []);
 
+  const signInAsGuest = useCallback(async () => {
+    setErrorMessage(null);
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) setErrorMessage(GUEST_ERROR);
+  }, []);
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) setErrorMessage('로그아웃하지 못했습니다. 다시 시도해 주세요.');
   }, []);
 
-  return { status, member, errorMessage, signInWithDiscord, signOut };
+  return { status, member, errorMessage, signInWithDiscord, signInAsGuest, signOut };
 }
