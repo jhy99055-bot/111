@@ -8,14 +8,21 @@ import PromoCodeForm from '@/components/PromoCodeForm';
 import RoundBets from '@/components/RoundBets';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import UserMenu from '@/components/UserMenu';
 import { useGameServer } from '@/hooks/useGameServer';
 import { useGameSounds } from '@/hooks/useGameSounds';
 import { useNow } from '@/hooks/useNow';
 import { floorTo2, formatChips, formatMultiplier, multiplierAt } from '@/lib/crashMath';
+import type { MemberProfile } from '@/types/member';
 
 const ROUNDS_PER_CYCLE = 1000;
 
-export default function CrashGame() {
+interface CrashGameProps {
+  member: MemberProfile;
+  onSignOut: () => void;
+}
+
+export default function CrashGame({ member, onSignOut }: CrashGameProps) {
   const { state, serverOffsetMs, connectionError, actionError, pending, placeBet, cashOut, redeem, loadBetHistory } =
     useGameServer();
   const [amount, setAmount] = useState(100);
@@ -81,6 +88,7 @@ export default function CrashGame() {
             <span className="rounded-full bg-slate-100 px-4 py-1.5 text-sm font-medium tabular-nums text-slate-700">
               {formatChips(state.chips)} 칩
             </span>
+            <UserMenu member={member} onSignOut={onSignOut} />
           </>
         }
       />

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { getPlayerId } from '@/lib/playerId';
 import {
   isBetHistory,
   isGameState,
@@ -13,7 +12,6 @@ const POLL_INTERVAL_MS = 500;
 const CONNECTION_ERROR = '서버와 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
 
 export function useGameServer() {
-  const [playerId] = useState(getPlayerId);
   const [state, setState] = useState<GameState | null>(null);
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -38,14 +36,14 @@ export function useGameServer() {
 
   const poll = useCallback(async () => {
     const requestedAt = Date.now();
-    const { data, error } = await supabase.rpc('game_state', { p_player: playerId });
+    const { data, error } = await supabase.rpc('game_state');
     if (!mountedRef.current) return;
     if (error || !applyState(data, requestedAt, Date.now())) {
       setConnectionError(CONNECTION_ERROR);
       return;
     }
     setConnectionError(null);
-  }, [applyState, playerId]);
+  }, [applyState]);
 
   useEffect(() => {
     poll();
@@ -58,7 +56,7 @@ export function useGameServer() {
       setPending(true);
       setActionError(null);
       const requestedAt = Date.now();
-      const { data, error } = await supabase.rpc(fnName, { p_player: playerId, ...args });
+      const { data, error } = await supabase.rpc(fnName, args);
       if (!mountedRef.current) return;
       setPending(false);
       if (error) {
@@ -67,7 +65,7 @@ export function useGameServer() {
       }
       if (!applyState(data, requestedAt, Date.now())) setActionError(CONNECTION_ERROR);
     },
-    [applyState, playerId],
+    [applyState],
   );
 
   const placeBet = useCallback(
@@ -80,21 +78,21 @@ export function useGameServer() {
   const redeem = useCallback(
     async (code: string): Promise<RedeemResult> => {
       const requestedAt = Date.now();
-      const { data, error } = await supabase.rpc('redeem_promo', { p_player: playerId, p_code: code });
+      const { data, error } = await supabase.rpc('redeem_promo', { p_code: code });
       if (!mountedRef.current) return { ok: false, message: CONNECTION_ERROR };
       if (error) return { ok: false, message: error.message || CONNECTION_ERROR };
       if (!applyState(data, requestedAt, Date.now())) return { ok: false, message: CONNECTION_ERROR };
       return { ok: true };
     },
-    [applyState, playerId],
+    [applyState],
   );
 
   const loadBetHistory = useCallback(async (): Promise<BetHistoryRow[]> => {
-    const { data, error } = await supabase.rpc('game_bet_history', { p_player: playerId });
+    const { data, error } = await supabase.rpc('game_bet_history');
     if (error) throw new Error(error.message || CONNECTION_ERROR);
     if (!isBetHistory(data)) throw new Error(CONNECTION_ERROR);
     return data;
-  }, [playerId]);
+  }, []);
 
   return {
     state,
